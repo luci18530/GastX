@@ -1,6 +1,6 @@
 """
 GastX - Backend FastAPI
-Versão 0.3.0 - Pipeline aprimorado
+Versão 0.4.0 - Visualizações temporais
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
@@ -24,7 +24,7 @@ from app.categorizer import (
 app = FastAPI(
     title="GastX API",
     description="API para análise inteligente de gastos pessoais",
-    version="0.3.0"
+    version="0.4.0"
 )
 
 # Configuração CORS para permitir requisições do frontend
@@ -42,7 +42,7 @@ async def root():
     """Endpoint raiz com informações da API"""
     return {
         "app": "GastX",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "description": "Analisador Inteligente de Gastos Pessoais"
     }
 
@@ -284,6 +284,53 @@ def calculate_category_summary(transactions: List[Dict[str, Any]]) -> List[Dict[
     # Ordena por valor total decrescente
     result.sort(key=lambda x: x['total'], reverse=True)
     
+    return result
+
+
+def calculate_monthly_data(transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Agrupa transações por mês para visualização temporal"""
+    monthly: Dict[str, Dict[str, Any]] = {}
+    
+    for t in transactions:
+        try:
+            # Extrai ano-mês da data
+            date_str = str(t['date'])
+            if len(date_str) >= 7:
+                month_key = date_str[:7]  # "YYYY-MM"
+            else:
+                continue
+            
+            if month_key not in monthly:
+                monthly[month_key] = {"gastos": 0.0, "recebidos": 0.0, "categorias": {}}
+                
+            amount = float(t['amount'])
+            category = t.get('category', 'Outros')
+            
+            if amount > 0:
+                monthly[month_key]["gastos"] += amount
+                if category not in monthly[month_key]["categorias"]:
+                    monthly[month_key]["categorias"][category] = 0.0
+                monthly[month_key]["categorias"][category] += amount
+            else:
+                monthly[month_key]["recebidos"] += abs(amount)
+                
+        except (ValueError, KeyError):
+            continue
+    
+    result = []
+    for month, data in monthly.items():
+        gastos = float(data["gastos"])
+        recebidos = float(data["recebidos"])
+        result.append({
+            "month": month,
+            "gastos": round(gastos, 2),
+            "recebidos": round(recebidos, 2),
+            "saldo": round(recebidos - gastos, 2),
+            "categorias": {k: round(float(v), 2) for k, v in data["categorias"].items()}
+        })
+    
+    # Ordena por mês
+    result.sort(key=lambda x: x["month"])
     return result
 
 

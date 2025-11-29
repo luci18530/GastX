@@ -12,7 +12,7 @@ O usuário faz upload de um arquivo CSV e recebe uma visão clara dos próprios 
 
 ---
 
-## Funcionalidades Atuais (v0.3)
+## Funcionalidades Atuais (v0.4)
 
 - Upload de extratos em CSV via drag-and-drop
 - Detecção automática do banco (Nubank, Inter, Bradesco, Itaú, C6 e genéricos)
@@ -21,12 +21,16 @@ O usuário faz upload de um arquivo CSV e recebe uma visão clara dos próprios 
   - Níveis de confiança na categorização
   - Sugestões inteligentes para transações não categorizadas
   - 14 categorias automáticas incluindo Investimentos e Impostos/Taxas
-- Dashboard com:
-  - Resumo de gastos e recebimentos
-  - Gráfico de pizza por categoria
-  - Ranking de categorias com percentuais
-  - Lista de transações paginada (20 por página)
-- **Novos endpoints de API**:
+- **Dashboard com navegação por abas**:
+  - **Visão Geral**: Resumo, gráfico de pizza, ranking de categorias
+  - **Evolução Temporal**: Gráficos mensais de gastos e recebimentos
+- **Visualizações Temporais**:
+  - Gráfico de linha/barras/área com gastos vs recebimentos por mês
+  - Evolução de categorias ao longo do tempo
+  - Saldo mensal (recebidos - gastos)
+  - Filtro por categoria específica
+- Lista de transações paginada (20 por página)
+- **Endpoints de API**:
   - `/categories` - Lista todas as categorias
   - `/categories/suggest` - Sugere categoria para uma transação
   - `/categories/add-pattern` - Adiciona novos padrões de reconhecimento
@@ -35,14 +39,13 @@ O usuário faz upload de um arquivo CSV e recebe uma visão clara dos próprios 
 
 ## Funcionalidades Planejadas  
 
-1. Distribuição e evolução mensal
-2. Ranking de maiores gastos individuais
-3. Módulo de insights:
+1. Ranking de maiores gastos individuais
+2. Módulo de insights:
    - Detecção de aumentos atípicos
    - Análise de assinaturas e recorrências
    - Projeção de gastos futuros
-4. Persistência de dados (SQLite/PostgreSQL)
-5. Aprendizado incremental na categorização
+3. Persistência de dados (SQLite/PostgreSQL)
+4. Aprendizado incremental na categorização
 
 ---
 
@@ -81,7 +84,10 @@ GastX/
 │   │   ├── components/
 │   │   │   ├── Header.jsx
 │   │   │   ├── UploadArea.jsx
-│   │   │   └── Dashboard.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── TimelineChart.jsx    # Gráfico temporal mensal
+│   │   │   ├── CategoryEvolution.jsx # Evolução por categoria
+│   │   │   └── Pagination.jsx
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   └── index.css
@@ -187,14 +193,25 @@ O frontend estará disponível em: `http://localhost:5173`
 - [x] **v0.1** - Estruturação do repositório
 - [x] **v0.2** - Prototipação do front-end e tela de upload
 - [x] **v0.3** - Pipeline de leitura e categorização aprimorado
-- [ ] **v0.4** - Primeiras visualizações temporais
+- [x] **v0.4** - Primeiras visualizações temporais
 - [ ] **v1.0** - Dashboard completo com insights
 
 ---
 
 ## Changelog
 
-### v0.3.0 (Atual)
+### v0.4.0 (Atual)
+- **Visualizações Temporais**: Novos gráficos de evolução mensal
+  - TimelineChart: Gráfico de barras, linhas ou área (alternável)
+  - Comparativo de gastos vs recebimentos por mês
+  - Visualização do saldo mensal
+- **Evolução por Categoria**: Análise de gastos por categoria ao longo do tempo
+  - Filtro para visualizar categoria específica ou todas
+  - Gráfico de barras empilhadas por mês
+- **Dashboard com Abas**: Navegação entre "Visão Geral" e "Evolução Temporal"
+- Função auxiliar `calculate_monthly_data()` no backend
+
+### v0.3.0
 - **Motor de categorização reescrito** com regex e níveis de confiança
 - Padrões organizados em 3 níveis de prioridade (high, medium, low)
 - 14 categorias automáticas (adicionado Investimentos, Impostos/Taxas, Beleza)
