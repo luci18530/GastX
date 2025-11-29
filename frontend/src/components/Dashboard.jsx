@@ -12,6 +12,7 @@ const CATEGORY_ICONS = {
   'Transporte': '🚗',
   'Alimentação': '🍔',
   'Saúde': '💊',
+  'Beleza/Cuidados Pessoais': '💇',
   'Compras': '🛒',
   'Entretenimento': '🎬',
   'Assinaturas': '📱',

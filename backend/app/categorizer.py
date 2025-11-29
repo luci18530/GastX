@@ -13,15 +13,15 @@ CATEGORY_PATTERNS: Dict[str, List[str]] = {
         "posto", "combustivel", "gasolina", "estacionamento", "parking"
     ],
     "Alimentação": [
-        "restaurante", "lanchonete", "pizzaria", "burger", "mcdonald",
-        "subway", "ifood", "rappi", "padaria", "cafe", "coffee",
-        "supermercado", "mercado", "hortifruti", "açougue", "acougue",
-        "ifd", "lanches", "sorvetes", "chiquinho", "redepharma"
+        "restaurante", "lanchonete", "pizzaria", "burger", "mcdonald", "pub",
+        "subway", "ifood", "rappi", "padaria", "cafe", "coffee", "bobs",
+        "supermercado", "mercado", "hortifruti", "açougue", "acougue", "panificadora",
+        "ifd", "lanches", "sorvetes", "chiquinho", "lanche"
     ],
     "Saúde": [
         "farmacia", "drogasil", "droga", "raia", "pague menos", "panvel",
         "hospital", "clinica", "consultorio", "medico", "dentista",
-        "laboratorio", "exame", "radiologia", "farma"
+        "laboratorio", "exame", "radiologia", "farma", "pharma", "redepharma"
     ],
     "Compras": [
         "amazon", "mercado livre", "shopee", "magazine", "casas bahia",
@@ -50,6 +50,9 @@ CATEGORY_PATTERNS: Dict[str, List[str]] = {
     "Academia/Esporte": [
         "academia", "gym", "smartfit", "crossfit", "natacao", "esporte",
         "moove", "power"
+    ],
+    "Beleza/Cuidados Pessoais": [
+        "barbearia", "cabelo", "barbeiro", "salao", "manicure", "pedicure", "estetica", "beleza"
     ]
 }
 
