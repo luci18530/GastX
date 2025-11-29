@@ -1,9 +1,19 @@
 """
 Modelos Pydantic para a API GastX
+Versão 0.3.0
 """
 
 from pydantic import BaseModel
 from typing import List, Optional
+from enum import Enum
+
+
+class ConfidenceLevelEnum(str, Enum):
+    """Níveis de confiança da categorização"""
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    NONE = "none"
 
 
 class Transaction(BaseModel):
@@ -12,6 +22,7 @@ class Transaction(BaseModel):
     title: str
     amount: float
     category: str
+    confidence: Optional[str] = None
 
 
 class CategorySummary(BaseModel):
@@ -20,6 +31,12 @@ class CategorySummary(BaseModel):
     total: float
     count: int
     percentage: float
+
+
+class CategorySuggestion(BaseModel):
+    """Sugestão de categoria"""
+    category: str
+    score: float
 
 
 class TransactionResponse(BaseModel):
@@ -37,6 +54,21 @@ class UploadResponse(BaseModel):
     total_received: float
     transactions: List[dict]
     category_summary: List[dict]
+    categorization_rate: Optional[float] = None
+
+
+class CategoriesResponse(BaseModel):
+    """Lista de categorias disponíveis"""
+    categories: List[str]
+    total: int
+
+
+class SuggestResponse(BaseModel):
+    """Resposta de sugestão de categoria"""
+    title: str
+    current_category: str
+    confidence: str
+    suggestions: List[CategorySuggestion]
 
 
 class ErrorResponse(BaseModel):

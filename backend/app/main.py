@@ -1,23 +1,30 @@
 """
 GastX - Backend FastAPI
-Versão 0.2.0
+Versão 0.3.0 - Pipeline aprimorado
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import pandas as pd
 from io import StringIO
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from app.models import TransactionResponse, UploadResponse, CategorySummary
-from app.categorizer import categorize_transaction
+from app.categorizer import (
+    categorize_transaction, 
+    categorize_transaction_detailed,
+    get_all_categories,
+    get_categorization_stats,
+    suggest_category,
+    add_pattern
+)
 
 app = FastAPI(
     title="GastX API",
     description="API para análise inteligente de gastos pessoais",
-    version="0.2.0"
+    version="0.3.0"
 )
 
 # Configuração CORS para permitir requisições do frontend
@@ -35,7 +42,7 @@ async def root():
     """Endpoint raiz com informações da API"""
     return {
         "app": "GastX",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "description": "Analisador Inteligente de Gastos Pessoais"
     }
 
@@ -46,11 +53,55 @@ async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 
+@app.get("/categories")
+async def list_categories():
+    """Lista todas as categorias disponíveis"""
+    categories = get_all_categories()
+    return {
+        "categories": categories,
+        "total": len(categories)
+    }
+
+
+@app.post("/categories/suggest")
+async def suggest_transaction_category(title: str = Query(..., description="Descrição da transação")):
+    """Sugere categorias para uma transação"""
+    suggestions = suggest_category(title)
+    current = categorize_transaction_detailed(title)
+    
+    return {
+        "title": title,
+        "current_category": current.category,
+        "confidence": current.confidence.value,
+        "suggestions": [
+            {"category": cat, "score": round(score, 2)} 
+            for cat, score in suggestions
+        ]
+    }
+
+
+@app.post("/categories/add-pattern")
+async def add_category_pattern(
+    category: str = Query(..., description="Nome da categoria"),
+    pattern: str = Query(..., description="Padrão regex a adicionar"),
+    priority: str = Query("medium", description="Prioridade: high, medium, low")
+):
+    """Adiciona um novo padrão a uma categoria existente"""
+    if priority not in ["high", "medium", "low"]:
+        raise HTTPException(status_code=400, detail="Prioridade deve ser: high, medium, low")
+    
+    success = add_pattern(category, pattern, priority)
+    if success:
+        return {"success": True, "message": f"Padrão '{pattern}' adicionado à categoria '{category}'"}
+    else:
+        raise HTTPException(status_code=400, detail=f"Categoria '{category}' não encontrada")
+
+
 @app.post("/upload/csv", response_model=UploadResponse)
 async def upload_csv(file: UploadFile = File(...)):
     """
     Faz upload de um arquivo CSV de extrato bancário.
-    Suporta formatos: Nubank, Inter
+    Suporta formatos: Nubank, Inter, Bradesco, Itaú, C6, e genéricos
     """
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Apenas arquivos CSV são aceitos")
@@ -58,10 +109,7 @@ async def upload_csv(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         # Tenta decodificar com diferentes encodings
-        try:
-            decoded = contents.decode('utf-8')
-        except UnicodeDecodeError:
-            decoded = contents.decode('latin-1')
+        decoded = try_decode(contents)
         
         df = pd.read_csv(StringIO(decoded))
         
@@ -71,19 +119,33 @@ async def upload_csv(file: UploadFile = File(...)):
         # Normaliza as colunas
         df = normalize_columns(df, bank)
         
-        # Categoriza as transações
+        # Valida colunas necessárias
+        required_cols = ['date', 'title', 'amount']
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Colunas obrigatórias não encontradas: {', '.join(missing)}"
+            )
+        
+        # Categoriza as transações com detalhes
         transactions = []
         for _, row in df.iterrows():
+            result = categorize_transaction_detailed(row['title'])
             transaction = {
                 "date": str(row['date']),
                 "title": row['title'],
                 "amount": float(row['amount']),
-                "category": categorize_transaction(row['title'])
+                "category": result.category,
+                "confidence": result.confidence.value
             }
             transactions.append(transaction)
         
         # Calcula resumo por categoria
         category_summary = calculate_category_summary(transactions)
+        
+        # Calcula estatísticas de categorização
+        stats = get_categorization_stats(transactions)
         
         # Calcula total
         total_spent = sum(t['amount'] for t in transactions if t['amount'] > 0)
@@ -96,43 +158,97 @@ async def upload_csv(file: UploadFile = File(...)):
             total_spent=round(total_spent, 2),
             total_received=round(total_received, 2),
             transactions=transactions,
-            category_summary=category_summary
+            category_summary=category_summary,
+            categorization_rate=stats.get("categorization_rate", 0)
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao processar arquivo: {str(e)}")
 
 
 def detect_bank(columns: List[str]) -> str:
     """Detecta o banco com base nas colunas do CSV"""
-    columns_lower = [c.lower() for c in columns]
+    columns_lower = [c.lower().strip() for c in columns]
+    columns_set = set(columns_lower)
     
     # Padrão Nubank: date, title, amount
-    if 'date' in columns_lower and 'title' in columns_lower and 'amount' in columns_lower:
+    if {'date', 'title', 'amount'}.issubset(columns_set):
         return "Nubank"
     
     # Padrão Inter: Data, Descrição, Valor
-    if 'data' in columns_lower and 'descrição' in columns_lower:
+    if 'data' in columns_set and ('descrição' in columns_set or 'descricao' in columns_set):
         return "Inter"
+    
+    # Padrão Bradesco
+    if 'data' in columns_set and 'histórico' in columns_set:
+        return "Bradesco"
+    
+    # Padrão Itaú
+    if 'data' in columns_set and 'lançamento' in columns_set:
+        return "Itaú"
+    
+    # Padrão C6 Bank
+    if 'data' in columns_set and 'movimentação' in columns_set:
+        return "C6 Bank"
     
     # Padrão genérico
     return "Desconhecido"
+
+
+def try_decode(contents: bytes) -> str:
+    """Tenta decodificar o conteúdo com diferentes encodings"""
+    encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+    
+    for encoding in encodings:
+        try:
+            return contents.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    
+    # Fallback: força utf-8 ignorando erros
+    return contents.decode('utf-8', errors='ignore')
 
 
 def normalize_columns(df: pd.DataFrame, bank: str) -> pd.DataFrame:
     """Normaliza as colunas do DataFrame para um padrão único"""
     df.columns = df.columns.str.lower().str.strip()
     
+    # Mapeamento expandido para múltiplos bancos
     column_mapping = {
+        # Datas
         'data': 'date',
+        'data da transação': 'date',
+        'data transação': 'date',
+        'data lançamento': 'date',
+        # Descrições
         'descrição': 'title',
         'descriçao': 'title',
         'descricao': 'title',
+        'histórico': 'title',
+        'historico': 'title',
+        'lançamento': 'title',
+        'lancamento': 'title',
+        'movimentação': 'title',
+        'movimentacao': 'title',
+        'detalhes': 'title',
+        # Valores
         'valor': 'amount',
-        'value': 'amount'
+        'value': 'amount',
+        'valor (r$)': 'amount',
+        'quantia': 'amount'
     }
     
     df = df.rename(columns=column_mapping)
+    
+    # Limpa valores de amount se necessário
+    if 'amount' in df.columns:
+        # Remove caracteres não numéricos (exceto - e .)
+        if df['amount'].dtype == object:
+            df['amount'] = df['amount'].astype(str).str.replace(r'[R$\s]', '', regex=True)
+            df['amount'] = df['amount'].str.replace(',', '.')
+            df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0)
     
     return df
 

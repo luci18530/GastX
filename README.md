@@ -12,16 +12,24 @@ O usuário faz upload de um arquivo CSV e recebe uma visão clara dos próprios 
 
 ---
 
-## Funcionalidades Atuais (v0.2)
+## Funcionalidades Atuais (v0.3)
 
 - Upload de extratos em CSV via drag-and-drop
-- Detecção automática do banco (Nubank, Inter)
-- Categorização automática de transações
+- Detecção automática do banco (Nubank, Inter, Bradesco, Itaú, C6 e genéricos)
+- **Pipeline de categorização aprimorado**:
+  - Padrões regex com 3 níveis de prioridade (high, medium, low)
+  - Níveis de confiança na categorização
+  - Sugestões inteligentes para transações não categorizadas
+  - 14 categorias automáticas incluindo Investimentos e Impostos/Taxas
 - Dashboard com:
   - Resumo de gastos e recebimentos
   - Gráfico de pizza por categoria
-  - Ranking de categorias
-  - Lista de transações
+  - Ranking de categorias com percentuais
+  - Lista de transações paginada (20 por página)
+- **Novos endpoints de API**:
+  - `/categories` - Lista todas as categorias
+  - `/categories/suggest` - Sugere categoria para uma transação
+  - `/categories/add-pattern` - Adiciona novos padrões de reconhecimento
 
 ---
 
@@ -144,25 +152,33 @@ O frontend estará disponível em: `http://localhost:5173`
 
 | Banco | Status | Formato |
 |-------|--------|---------|
-| Nubank | Suportado | `date, title, amount` |
-| Inter | Suportado | `Data, Descrição, Valor` |
-| Outros | Genérico | Colunas devem seguir padrão similar |
+| Nubank | ✅ Suportado | `date, title, amount` |
+| Inter | ✅ Suportado | `Data, Descrição, Valor` |
+| Bradesco | ✅ Suportado | `Data, Histórico, Valor` |
+| Itaú | ✅ Suportado | `Data, Lançamento, Valor` |
+| C6 Bank | ✅ Suportado | `Data, Movimentação, Valor` |
+| Outros | 🔄 Genérico | Colunas devem seguir padrão similar |
 
 ---
 
 ## Categorias Automáticas
 
-- **Transporte** - Uber, 99, táxi, combustível
-- **Alimentação** - Restaurantes, supermercados, delivery
-- **Saúde** - Farmácias, consultas, exames
-- **Compras** - E-commerce, lojas
-- **Entretenimento** - Streaming, cinema, jogos
-- **Assinaturas** - Serviços recorrentes
-- **Casa** - Contas, aluguel, manutenção
-- **Educação** - Cursos, livros
-- **Transferências** - PIX, TED
-- **Academia/Esporte** - Academias, esportes
-- **Outros** - Não categorizados
+| Categoria | Exemplos | Ícone |
+|-----------|----------|-------|
+| **Transporte** | Uber, 99, táxi, combustível, estacionamento
+| **Alimentação** | Restaurantes, supermercados, iFood, Rappi
+| **Saúde** | Farmácias, consultas, exames, hospitais
+| **Beleza/Cuidados Pessoais** | Barbearia, salão, manicure, estética
+| **Compras** | Amazon, Shopee, Mercado Livre, lojas
+| **Entretenimento** | Netflix, Spotify, cinema, jogos
+| **Assinaturas** | ChatGPT, iCloud, Microsoft 365, serviços
+| **Casa** | Luz, água, internet, aluguel, condomínio
+| **Educação** | Cursos, livros, Udemy, faculdade
+| **Transferências** | PIX, TED, DOC
+| **Academia/Esporte** | Smart Fit, academias, esportes
+| **Investimentos** | XP, BTG, aplicações, resgates
+| **Impostos/Taxas** | IOF, tarifas, multas, anuidades
+| **Outros** | Não categorizados
 
 ---
 
@@ -170,7 +186,7 @@ O frontend estará disponível em: `http://localhost:5173`
 
 - [x] **v0.1** - Estruturação do repositório
 - [x] **v0.2** - Prototipação do front-end e tela de upload
-- [ ] **v0.3** - Pipeline básico de leitura e categorização aprimorado
+- [x] **v0.3** - Pipeline de leitura e categorização aprimorado
 - [ ] **v0.4** - Primeiras visualizações temporais
 - [ ] **v1.0** - Dashboard completo com insights
 
@@ -178,7 +194,18 @@ O frontend estará disponível em: `http://localhost:5173`
 
 ## Changelog
 
-### v0.2.0 (Atual)
+### v0.3.0 (Atual)
+- **Motor de categorização reescrito** com regex e níveis de confiança
+- Padrões organizados em 3 níveis de prioridade (high, medium, low)
+- 14 categorias automáticas (adicionado Investimentos, Impostos/Taxas, Beleza)
+- Suporte expandido para mais bancos (Bradesco, Itaú, C6 Bank)
+- Normalização inteligente de valores monetários (R$, vírgula, etc.)
+- Novos endpoints: `/categories`, `/categories/suggest`, `/categories/add-pattern`
+- Paginação na lista de transações (20 por página)
+- Estatísticas de taxa de categorização
+- Função de sugestão de categorias para transações não reconhecidas
+
+### v0.2.0
 - Interface React com Vite e Tailwind CSS
 - Tela de upload com drag-and-drop
 - Dashboard com gráficos e categorização

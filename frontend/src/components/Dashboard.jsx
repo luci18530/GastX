@@ -20,6 +20,8 @@ const CATEGORY_ICONS = {
   'Educação': '📚',
   'Transferências': '💸',
   'Academia/Esporte': '💪',
+  'Investimentos': '📈',
+  'Impostos/Taxas': '🧾',
   'Outros': '📦'
 }
 
