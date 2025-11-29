@@ -32,7 +32,7 @@ function App() {
       </main>
 
       <footer className="text-center py-6 text-slate-500 text-sm">
-        <p>GastX v0.4.0 - Analisador Inteligente de Gastos</p>
+        <p>GastX v0.5.0 - Analisador Inteligente de Gastos</p>
       </footer>
     </div>
   )

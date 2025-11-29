@@ -1,6 +1,6 @@
 """
 GastX - Backend FastAPI
-Versão 0.4.0 - Visualizações temporais
+Versão 0.5.0 - Filtros e Buscas Avançadas
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
@@ -24,7 +24,7 @@ from app.categorizer import (
 app = FastAPI(
     title="GastX API",
     description="API para análise inteligente de gastos pessoais",
-    version="0.4.0"
+    version="0.5.0"
 )
 
 # Configuração CORS para permitir requisições do frontend
@@ -42,7 +42,7 @@ async def root():
     """Endpoint raiz com informações da API"""
     return {
         "app": "GastX",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "description": "Analisador Inteligente de Gastos Pessoais"
     }
 

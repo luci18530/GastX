@@ -12,7 +12,7 @@ O usuário faz upload de um arquivo CSV e recebe uma visão clara dos próprios 
 
 ---
 
-## Funcionalidades Atuais (v0.4)
+## Funcionalidades Atuais (v0.5)
 
 - Upload de extratos em CSV via drag-and-drop
 - Detecção automática do banco (Nubank, Inter, Bradesco, Itaú, C6 e genéricos)
@@ -28,7 +28,13 @@ O usuário faz upload de um arquivo CSV e recebe uma visão clara dos próprios 
   - Gráfico de linha/barras/área com gastos vs recebimentos por mês
   - Evolução de categorias ao longo do tempo
   - Saldo mensal (recebidos - gastos)
-  - Filtro por categoria específica
+- **Filtros e Buscas Avançadas**:
+  - Filtro por período customizado (data inicial/final)
+  - Busca por descrição da transação
+  - Filtro por faixa de valor (mínimo/máximo)
+  - Seleção de múltiplas categorias
+  - Filtro por tipo (gastos/recebimentos)
+  - Exportação de dados filtrados para CSV
 - Lista de transações paginada (20 por página)
 - **Endpoints de API**:
   - `/categories` - Lista todas as categorias
@@ -85,9 +91,12 @@ GastX/
 │   │   │   ├── Header.jsx
 │   │   │   ├── UploadArea.jsx
 │   │   │   ├── Dashboard.jsx
-│   │   │   ├── TimelineChart.jsx    # Gráfico temporal mensal
-│   │   │   ├── CategoryEvolution.jsx # Evolução por categoria
+│   │   │   ├── TimelineChart.jsx      # Gráfico temporal mensal
+│   │   │   ├── CategoryEvolution.jsx  # Evolução por categoria
+│   │   │   ├── TransactionFilters.jsx # Filtros e busca avançada
 │   │   │   └── Pagination.jsx
+│   │   ├── utils/
+│   │   │   └── exportCSV.js           # Utilitário de exportação
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   └── index.css
@@ -194,13 +203,31 @@ O frontend estará disponível em: `http://localhost:5173`
 - [x] **v0.2** - Prototipação do front-end e tela de upload
 - [x] **v0.3** - Pipeline de leitura e categorização aprimorado
 - [x] **v0.4** - Primeiras visualizações temporais
+- [x] **v0.5** - Filtros e buscas avançadas
 - [ ] **v1.0** - Dashboard completo com insights
 
 ---
 
 ## Changelog
 
-### v0.4.0 (Atual)
+### v0.5.0 (Atual)
+- **Filtros Avançados**: Sistema completo de filtragem de transações
+  - Filtro por período customizado (data inicial e final)
+  - Busca por texto na descrição
+  - Filtro por faixa de valores (mínimo e máximo)
+  - Seleção de múltiplas categorias
+  - Filtro por tipo de transação (gastos/recebimentos)
+- **Exportação CSV**: Exporta dados filtrados ou completos
+  - Formato compatível com Excel (separador `;` e BOM UTF-8)
+  - Nome de arquivo com data e status (filtrado/completo)
+- **Dashboard Responsivo aos Filtros**: Todos os dados atualizam ao filtrar
+  - Cards de resumo recalculam totais
+  - Gráficos refletem dados filtrados
+  - Contagem de transações atualizada
+- Novo componente `TransactionFilters.jsx`
+- Utilitário `exportCSV.js` para exportação
+
+### v0.4.0
 - **Visualizações Temporais**: Novos gráficos de evolução mensal
   - TimelineChart: Gráfico de barras, linhas ou área (alternável)
   - Comparativo de gastos vs recebimentos por mês

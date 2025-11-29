@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { TrendingUp, TrendingDown, CreditCard, PieChart, BarChart3, Calendar, Layers } from 'lucide-react'
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import Pagination from './Pagination'
 import TimelineChart from './TimelineChart'
 import CategoryEvolution from './CategoryEvolution'
+import TransactionFilters from './TransactionFilters'
+import { exportToCSV, generateExportFilename } from '../utils/exportCSV'
 
 const COLORS = [
   '#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -30,6 +32,7 @@ const CATEGORY_ICONS = {
 function Dashboard({ data }) {
   const [currentPage, setCurrentPage] = useState(1)
   const [activeTab, setActiveTab] = useState('overview') // 'overview', 'timeline', 'categories'
+  const [filteredTransactions, setFilteredTransactions] = useState(null)
   const ITEMS_PER_PAGE = 20
   
   const { 
@@ -41,13 +44,79 @@ function Dashboard({ data }) {
     category_summary 
   } = data
 
+  // Usa transações filtradas ou todas
+  const displayTransactions = filteredTransactions || transactions
+
+  // Lista de categorias únicas
+  const allCategories = useMemo(() => {
+    const cats = new Set(transactions.map(t => t.category))
+    return Array.from(cats).sort()
+  }, [transactions])
+
+  // Recalcula resumo baseado nas transações filtradas
+  const displayCategorySummary = useMemo(() => {
+    if (!filteredTransactions) return category_summary
+    
+    const summary = {}
+    filteredTransactions.forEach(t => {
+      if (t.amount > 0) {
+        if (!summary[t.category]) {
+          summary[t.category] = { total: 0, count: 0 }
+        }
+        summary[t.category].total += t.amount
+        summary[t.category].count += 1
+      }
+    })
+    
+    const result = Object.entries(summary).map(([category, data]) => ({
+      category,
+      total: Math.round(data.total * 100) / 100,
+      count: data.count,
+      percentage: 0
+    }))
+    
+    const grandTotal = result.reduce((sum, item) => sum + item.total, 0)
+    result.forEach(item => {
+      item.percentage = grandTotal > 0 ? Math.round((item.total / grandTotal) * 1000) / 10 : 0
+    })
+    
+    return result.sort((a, b) => b.total - a.total)
+  }, [filteredTransactions, category_summary])
+
+  // Recalcula totais baseado nas transações filtradas
+  const displayTotals = useMemo(() => {
+    if (!filteredTransactions) return { spent: total_spent, received: total_received }
+    
+    const spent = filteredTransactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
+    const received = Math.abs(filteredTransactions.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0))
+    
+    return { 
+      spent: Math.round(spent * 100) / 100, 
+      received: Math.round(received * 100) / 100 
+    }
+  }, [filteredTransactions, total_spent, total_received])
+
   // Calcular paginação
-  const totalPages = Math.ceil(transactions.length / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(displayTransactions.length / ITEMS_PER_PAGE)
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE
   const endIdx = startIdx + ITEMS_PER_PAGE
-  const paginatedTransactions = transactions.slice(startIdx, endIdx)
+  const paginatedTransactions = displayTransactions.slice(startIdx, endIdx)
 
-  const pieData = category_summary.map((item, index) => ({
+  // Reset página ao filtrar
+  const handleFilterChange = (filtered) => {
+    setFilteredTransactions(filtered.length === transactions.length ? null : filtered)
+    setCurrentPage(1)
+  }
+
+  // Exportar transações
+  const handleExport = () => {
+    const toExport = filteredTransactions || transactions
+    const suffix = filteredTransactions ? 'filtrado' : 'completo'
+    const filename = generateExportFilename('gastx', suffix)
+    exportToCSV(toExport, filename)
+  }
+
+  const pieData = displayCategorySummary.map((item, index) => ({
     name: item.category,
     value: item.total,
     percentage: item.percentage
@@ -61,6 +130,14 @@ function Dashboard({ data }) {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {/* Filters */}
+      <TransactionFilters
+        transactions={transactions}
+        categories={allCategories}
+        onFilterChange={handleFilterChange}
+        onExport={handleExport}
+      />
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
@@ -72,19 +149,19 @@ function Dashboard({ data }) {
         <SummaryCard
           icon={<BarChart3 className="w-5 h-5" />}
           label="Transações"
-          value={total_transactions.toString()}
+          value={`${displayTransactions.length}${filteredTransactions ? ` / ${total_transactions}` : ''}`}
           color="purple"
         />
         <SummaryCard
           icon={<TrendingDown className="w-5 h-5" />}
           label="Total Gasto"
-          value={`R$ ${total_spent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          value={`R$ ${displayTotals.spent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
           color="red"
         />
         <SummaryCard
           icon={<TrendingUp className="w-5 h-5" />}
           label="Total Recebido"
-          value={`R$ ${total_received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          value={`R$ ${displayTotals.received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
           color="green"
         />
       </div>
@@ -148,7 +225,7 @@ function Dashboard({ data }) {
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
               <h3 className="text-lg font-semibold text-slate-800 mb-4">Ranking de Categorias</h3>
               <div className="space-y-3 max-h-80 overflow-y-auto">
-                {category_summary.map((item, index) => (
+                {displayCategorySummary.map((item, index) => (
                   <CategoryRow 
                     key={item.category}
                     category={item.category}
@@ -203,20 +280,21 @@ function Dashboard({ data }) {
             </div>
             <div className="mt-4 flex flex-col items-center gap-3">
               <p className="text-sm text-slate-600">
-                Mostrando {paginatedTransactions.length} de {transactions.length} transações
+                Mostrando {paginatedTransactions.length} de {displayTransactions.length} transações
+                {filteredTransactions && ` (${transactions.length} total)`}
               </p>
-              {transactions.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
+              {displayTransactions.length > 0 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />}
             </div>
           </div>
         </>
       )}
 
       {activeTab === 'timeline' && (
-        <TimelineChart transactions={transactions} />
+        <TimelineChart transactions={displayTransactions} />
       )}
 
       {activeTab === 'categories' && (
-        <CategoryEvolution transactions={transactions} categorySummary={category_summary} />
+        <CategoryEvolution transactions={displayTransactions} categorySummary={displayCategorySummary} />
       )}
     </div>
   )
